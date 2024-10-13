@@ -1,0 +1,1 @@
+export PATH=/opt/or1k_toolchain/bin/:/bin:/usr/bin$
