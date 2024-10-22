@@ -1,6 +1,25 @@
 #include "fractal_fxpt.h"
 #include <swap.h>
 #include <stdint.h>
+#include <stdio.h>
+
+
+#define NUM_INT    6                             // Number of bits for the integer part
+#define NUM_FRAC   (32 - NUM_INT - 1)            // Remaining bits for the fractional part (32-bit total, 1 bit for sign)
+#define INT_MASK   ((1 << NUM_INT) - 1)          // Mask for the integer part
+#define FRAC_MASK  ((1 << NUM_FRAC) - 1)         // Mask for the fractional part
+#define FIXED_SCALE (1 << NUM_FRAC)               // Scaling factor for fixed-point representation
+
+#define SIGN_MASK   (1 << 31)  // Sign bit mask for 32-bit
+#define MANTISSA_MASK ((1 << 23) - 1) 
+#define EXPONENT_MASK 0xFF
+#define IMPLICIT_ONE (1 << 23)
+
+// Floating point representation
+#define EXPONENT_NUM_BIT 8
+#define EXPONENT_MAX ((1 << EXPONENT_NUM_BIT) - 1)  // 2^EXPONENT_NUM_BIT - 1 = 255 (for 8 expo)
+#define FLOAT_BIAS 127
+#define MANTISSA_NUM_BIT 23
 
 //! \brief  Mandelbrot fractal point calculation function
 //! \param  cx    x-coordinate
@@ -8,19 +27,22 @@
 //! \param  n_max maximum number of iterations
 //! \return       number of performed iterations at coordinate (cx, cy)
 uint16_t calc_mandelbrot_point_soft(fixed cx, fixed cy, uint16_t n_max) {
+    
   fixed x = cx;
   fixed y = cy;
   uint16_t n = 0;
-  fixed xx, yy, two_xy;
+  fixed xx, yy, two_xy, minus_yy;
+  fixed two = float_to_fixed(2.0);
   do {
-    xx = x * x;
-    yy = y * y;
-    two_xy = 2 * x * y;
-
+    xx = fixed_point_multiply(x, x);
+    yy = fixed_point_multiply(y, y);
+    two_xy = fixed_point_multiply(fixed_point_multiply(two, x), y);
+    
     x = xx - yy + cx;
     y = two_xy + cy;
+
     ++n;
-  } while (((xx + yy) < float_to_q4_28(4.0)) && (n < n_max));
+  } while (((xx + yy) < float_to_fixed(4.0)) && (n < n_max));
   return n;
 }
 
@@ -116,34 +138,83 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
   }
 }
 
-fixed float_to_q4_28(float float_value) {
-  union 
-  {
-    float f;
-    uint32_t bits;
-  } float_union;
 
-  float_union.f = float_value;
-  fixed fixed_value;
-  uint32_t mantissa;
-  uint8_t integer;
-  int8_t exponent;
-  uint8_t exponent_bits = ((float_union.bits >> 23) & 0xFF); // Shift right exponent (b30::b23 to b7::b0)
+// Convert a fixed-point value back to a float
+float fixed_to_float(fixed fixed_value) {
+    // Convert fixed-point back to float by dividing by scale factor
+    return (float)fixed_value / FIXED_SCALE;
+}
 
-  if (exponent_bits <= 0) { // Denormalized representation (We will never reach the denormalized representation as min value of q4_28 is 2^-28)
-    fixed_value = 0;
-  } else { // Normalized representation
-    exponent = exponent_bits - 127;
-    mantissa = 0x00800000 | (float_union.bits & 0x007FFFFF); // implicit 1 of mantissa + 23 LSB
-    if (exponent >= 0) {
-      integer =  mantissa >> (23 - exponent); // 3 bits for integer
-      mantissa = (mantissa << exponent) & 0x007FFFFF; // left shift (multiply by 2^exponent)
+// Multiply two fixed-point numbers
+fixed fixed_point_multiply(fixed a, fixed b) {
+    int64_t temp = (int64_t)a * (int64_t)b;
+    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back
+    return result;
+}
+
+
+fixed float_to_fixed(float float_value) {
+    // Union to easily access the bits of the float value
+    union {
+        float f;
+        uint32_t bits;
+    } float_union;
+
+    float_union.f = float_value;
+    fixed fixed_value;
+    
+    // Extracting the parts of the float
+    uint32_t sign = float_union.bits & SIGN_MASK; // Sign bit
+    uint8_t exponent_bits = ((float_union.bits >> MANTISSA_NUM_BIT) & EXPONENT_MASK); // Exponent bits
+    uint32_t mantissa = IMPLICIT_ONE | (float_union.bits & MANTISSA_MASK); // Add implicit 1
+    
+    int8_t exponent = exponent_bits - FLOAT_BIAS; // Bias of 127 for the exponent
+    
+    if (exponent_bits == 0) {
+        // Denormalized number, treat as 0 for simplicity in this range
+        fixed_value = 0;
+    } else if (exponent_bits == EXPONENT_MAX) {
+        // Inf/NaN are not representable in fixed-point
+        fixed_value = 0; 
     } else {
-      integer = 0;
-      mantissa = (mantissa >> -exponent) & 0x007FFFFF; // right shift (divide by 2^|exponent|)
+        // Normalized number
+        if (exponent >= 0) {
+            // Left shift mantissa if exponent is positive
+            mantissa <<= exponent;
+        } else {
+            // Right shift mantissa if exponent is negative
+            mantissa >>= -exponent;
+        }
+        
+        // Adjust mantissa to fit into the fixed-point format
+        fixed_value = (mantissa << (NUM_FRAC - MANTISSA_NUM_BIT)); // Scale the mantissa to NUM_FRAC
+        
+        // Apply the sign to the fixed-point result
+        if (sign) {
+            fixed_value = -fixed_value;
+        }
     }
-    fixed_value = (float_union.bits & 0x80000000) | (integer << 28) | (mantissa << 5);  // sign + integer (28 = 32 - 4)
+    
+    return fixed_value;
+}
 
+void print_fixed_point_bits(fixed fixed_point_value) {  
+  int32_t int_part = (fixed_point_value & (INT_MASK<<NUM_FRAC)) >> NUM_FRAC;
+  int32_t frac_part = fixed_point_value & FRAC_MASK;
+
+  //sign bit 
+  int sign_bit = (fixed_point_value >> 31) & 1;
+  printf("%d | ", sign_bit);
+
+  // integer part 
+  for (int i = NUM_INT - 1; i >= 0; i--) {  // Exclude the sign bit for printing
+      printf("%d", (int_part >> i) & 1);
   }
-  return fixed_value;
+  printf(" | ");
+  
+  // fractional part 
+  for (int i = NUM_FRAC - 1; i >= 0; i--) {
+      printf("%d", (frac_part >> i) & 1);
+  }
+  printf("\n");
 }

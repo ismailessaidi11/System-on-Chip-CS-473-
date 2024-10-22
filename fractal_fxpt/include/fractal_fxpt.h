@@ -29,6 +29,9 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
 //! \note  For x equal 0, the function returns -1.
 int ilog2(unsigned x);
 
-fixed float_to_q4_28(float value);
+fixed float_to_fixed(float value);
+fixed fixed_point_multiply(fixed a, fixed b);
+void print_fixed_point_bits(fixed fixed_point_value);
+//float fixed_to_float(fixed fixed_value);
 
 #endif // FRACTAL_FXPT_H
