@@ -1,6 +1,12 @@
 #include "fractal_myflpt.h"
 #include <swap.h>
 
+// Floating point representation
+#define EXPONENT_NUM_BIT 8
+#define EXPONENT_MAX ((1 << EXPONENT_NUM_BIT) - 1)  // 2^EXPONENT_NUM_BIT - 1 = 255 (for 8 expo)
+#define FLOAT_BIAS 127
+#define MANTISSA_NUM_BIT 23
+
 //! \brief  Mandelbrot fractal point calculation function
 //! \param  cx    x-coordinate
 //! \param  cy    y-coordinate

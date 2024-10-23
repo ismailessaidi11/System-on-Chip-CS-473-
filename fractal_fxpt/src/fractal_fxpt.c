@@ -3,23 +3,27 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// IEEE Floating point representation defines
+/*   ___________________________________________________
+    |1 sign bit|  8 exponent bits  |  23 mantissa bits  |
+    |__________|___________________|____________________|
+*/
+#define IEEE_EXPONENT_NUM_BIT 8                                  // Number of bits for exponent
+#define IEEE_EXPONENT_MASK    ((1 << IEEE_EXPONENT_NUM_BIT) - 1) // Mask for exponent = 11111111b 
+#define IEEE_BIAS             127                                // exponent_value = exponent_bits - BIAS
+#define IEEE_MANTISSA_NUM_BIT 23                                 // Number of bits for the mantissa
+#define IEEE_MANTISSA_MASK    ((1 << IEEE_MANTISSA_NUM_BIT) - 1) // Mask for mantissa 
+#define IEEE_IMPLICIT_ONE     (1 << IEEE_MANTISSA_NUM_BIT)       // 1.mantissa
 
-#define NUM_INT    6                             // Number of bits for the integer part
-#define NUM_FRAC   (32 - NUM_INT - 1)            // Remaining bits for the fractional part (32-bit total, 1 bit for sign)
-#define INT_MASK   ((1 << NUM_INT) - 1)          // Mask for the integer part
-#define FRAC_MASK  ((1 << NUM_FRAC) - 1)         // Mask for the fractional part
-#define FIXED_SCALE (1 << NUM_FRAC)               // Scaling factor for fixed-point representation
+// Fixed point representation defines
+#define NUM_INT     6                        // Number of bits for the integer part
+#define NUM_FRAC    (32 - NUM_INT - 1)       // Remaining bits for the fractional part (32-bit total, 1 bit for sign)
+#define INT_MASK    ((1 << NUM_INT) - 1)     // Mask for the integer part
+#define FRAC_MASK   ((1 << NUM_FRAC) - 1)    // Mask for the fractional part
+#define FIXED_SCALE (1 << NUM_FRAC)          // Scaling factor for fixed-point representation
+#define SIGN_MASK   (1 << 31)                // Sign bit mask for 32-bit
 
-#define SIGN_MASK   (1 << 31)  // Sign bit mask for 32-bit
-#define MANTISSA_MASK ((1 << 23) - 1) 
-#define EXPONENT_MASK 0xFF
-#define IMPLICIT_ONE (1 << 23)
 
-// Floating point representation
-#define EXPONENT_NUM_BIT 8
-#define EXPONENT_MAX ((1 << EXPONENT_NUM_BIT) - 1)  // 2^EXPONENT_NUM_BIT - 1 = 255 (for 8 expo)
-#define FLOAT_BIAS 127
-#define MANTISSA_NUM_BIT 23
 
 //! \brief  Mandelbrot fractal point calculation function
 //! \param  cx    x-coordinate
@@ -139,20 +143,23 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
 }
 
 
-// Convert a fixed-point value back to a float
+//! \brief  Convert a fixed-point value back to a float
+//! \param  fixed_value  to be converted to float
 float fixed_to_float(fixed fixed_value) {
-    // Convert fixed-point back to float by dividing by scale factor
     return (float)fixed_value / FIXED_SCALE;
 }
 
-// Multiply two fixed-point numbers
+//! \brief  Multiply two fixed-point numbers
+//! \param  a fixed operand of multiplication
+//! \param  b fixed operand of multiplication
 fixed fixed_point_multiply(fixed a, fixed b) {
     int64_t temp = (int64_t)a * (int64_t)b;
-    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back
+    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back to 32 bits
     return result;
 }
 
-
+//! \brief  Convert a float value to a fixed-point
+//! \param  float_value  to be converted to fixed-point
 fixed float_to_fixed(float float_value) {
     // Union to easily access the bits of the float value
     union {
@@ -165,15 +172,15 @@ fixed float_to_fixed(float float_value) {
     
     // Extracting the parts of the float
     uint32_t sign = float_union.bits & SIGN_MASK; // Sign bit
-    uint8_t exponent_bits = ((float_union.bits >> MANTISSA_NUM_BIT) & EXPONENT_MASK); // Exponent bits
-    uint32_t mantissa = IMPLICIT_ONE | (float_union.bits & MANTISSA_MASK); // Add implicit 1
+    uint8_t exponent_bits = ((float_union.bits >> IEEE_MANTISSA_NUM_BIT) & IEEE_EXPONENT_MASK); // Exponent bits
+    uint32_t mantissa = IEEE_IMPLICIT_ONE | (float_union.bits & IEEE_MANTISSA_MASK); // Add implicit 1
     
-    int8_t exponent = exponent_bits - FLOAT_BIAS; // Bias of 127 for the exponent
+    int8_t exponent = exponent_bits - IEEE_BIAS; // Bias of 127 for the exponent
     
     if (exponent_bits == 0) {
         // Denormalized number, treat as 0 for simplicity in this range
         fixed_value = 0;
-    } else if (exponent_bits == EXPONENT_MAX) {
+    } else if (exponent_bits == IEEE_EXPONENT_MASK) { // exponent_bits == 255
         // Inf/NaN are not representable in fixed-point
         fixed_value = 0; 
     } else {
@@ -187,7 +194,7 @@ fixed float_to_fixed(float float_value) {
         }
         
         // Adjust mantissa to fit into the fixed-point format
-        fixed_value = (mantissa << (NUM_FRAC - MANTISSA_NUM_BIT)); // Scale the mantissa to NUM_FRAC
+        fixed_value = (mantissa << (NUM_FRAC - IEEE_MANTISSA_NUM_BIT)); // Scale the mantissa to NUM_FRAC
         
         // Apply the sign to the fixed-point result
         if (sign) {
@@ -198,16 +205,18 @@ fixed float_to_fixed(float float_value) {
     return fixed_value;
 }
 
-void print_fixed_point_bits(fixed fixed_point_value) {  
-  int32_t int_part = (fixed_point_value & (INT_MASK<<NUM_FRAC)) >> NUM_FRAC;
-  int32_t frac_part = fixed_point_value & FRAC_MASK;
+//! \brief  Print the bits of fixed point for debugging
+//! \param  fixed_value  to be printed
+void print_fixed_point_bits(fixed fixed_value) {  
+  int32_t int_part = (fixed_value & (INT_MASK<<NUM_FRAC)) >> NUM_FRAC;
+  int32_t frac_part = fixed_value & FRAC_MASK;
 
   //sign bit 
-  int sign_bit = (fixed_point_value >> 31) & 1;
+  int sign_bit = (fixed_value >> 31) & 1;
   printf("%d | ", sign_bit);
 
   // integer part 
-  for (int i = NUM_INT - 1; i >= 0; i--) {  // Exclude the sign bit for printing
+  for (int i = NUM_INT - 1; i >= 0; i--) { 
       printf("%d", (int_part >> i) & 1);
   }
   printf(" | ");
