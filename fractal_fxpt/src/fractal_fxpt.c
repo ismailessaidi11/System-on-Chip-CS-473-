@@ -1,4 +1,5 @@
 #include "fractal_fxpt.h"
+#include <rtc.h>
 #include <swap.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -132,6 +133,8 @@ rgb565 iter_to_colour1(uint16_t iter, uint16_t n_max) {
 void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
                   fixed cx_0, fixed cy_0, fixed delta, uint16_t n_max) {
+  Time start, end;
+  readTime(&start);
   rgb565 *pixel = fbuf;
   fixed cy = cy_0;
   for (int k = 0; k < height; ++k) {
@@ -144,6 +147,8 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
     }
     cy += delta;
   }
+  readTime(&end);
+  printf("run time : %02X:%02X:%02X\n", end.hours - start.hours, end.minutes - start.minutes, end.seconds - start.seconds);
 }
 
 //! \brief  Convert a float value to a fixed-point
@@ -223,4 +228,12 @@ void print_fixed_point_bits(fixed fixed_value) {
       printf("%d", (frac_part >> i) & 1);
   }
   printf("\n");
+}
+
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time) {
+  time->hours = readRtcRegister(2);   
+  time->minutes = readRtcRegister(1); 
+  time->seconds = readRtcRegister(0); 
 }

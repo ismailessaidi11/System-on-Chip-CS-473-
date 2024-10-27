@@ -224,16 +224,13 @@ myfloat myfloat_addition(myfloat a, myfloat b) {
   }
 
   // Normalize the result
-  uint8_t max_exponent = exponent_a > exponent_b ? exponent_a : exponent_b;
-  uint8_t result_exponent = max_exponent;
+  uint8_t result_exponent = exponent_a > exponent_b ? exponent_a : exponent_b; // maximum exponent
 
-  // Check for mantissa overflow (result exceeds range that implicit 1 can handle)
+  // Check for mantissa overflow 
   if (result_mantissa & (1 << (MYFLOAT_MANTISSA_NUM_BIT + 1))) {
-    // Right shift to normalize and increase exponent
     result_mantissa >>= 1;
     result_exponent++;
   }
-
   while ((result_mantissa & (1 << MYFLOAT_MANTISSA_NUM_BIT)) == 0 && result_mantissa != 0) { // while implicit one of result (bit23) is 0 and stop if result = 0 (in case of equal substraction)
     result_mantissa <<= 1;
     result_exponent--;
@@ -336,49 +333,43 @@ uint32_t myfloat_less_than(myfloat a, myfloat b) {
   return 0;
 }
 
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time) {
+  time->hours = readRtcRegister(2);   
+  time->minutes = readRtcRegister(1); 
+  time->seconds = readRtcRegister(0); 
+}
 
 void print_myfloat_bits(myfloat myfloat_value) {
-  
-  //float float_value = myfloat_to_float(myfloat_value);
-  //printf("myfloat of %f is:\n", float_value);
-  // Extract mantissa and exponent parts
   int32_t mantissa = (myfloat_value & MYFLOAT_MANTISSA_MASK) >> MYFLOAT_EXPONENT_NUM_BIT;
   int32_t exponent = myfloat_value & MYFLOAT_EXPONENT_MASK;
 
-  // Print the sign bit (1 if negative, 0 if positive)
+  // print sign bit
   int sign_bit = (myfloat_value >> 31) & 1;
   printf("%d | ", sign_bit);
 
-  // Print the mantissa part in binary
+  // print mantissa
   for (int i = MYFLOAT_MANTISSA_NUM_BIT - 1; i >= 0; i--) {  // Exclude the sign bit for printing
       printf("%d", (mantissa >> i) & 1);
   }
   
-  // Separator
   printf(" | ");
-  
-  // Print the exponent part in binary
+
+  // print exponent
   for (int i = MYFLOAT_EXPONENT_NUM_BIT- 1; i >= 0; i--) {
       printf("%d", (exponent >> i) & 1);
   }
-  
-  printf("\n");
-  printf("\n");
+  printf("\n\n");
 }
 
 void print_bits(int32_t float_value) {
-  /*    union {
-      float f;
-      uint32_t bits;
-  } float_union;
-
-  float_union.f = float_value;*/
   for (int i = 31; i >= 0; i--) {
         // Use bitwise AND to check each bit
         unsigned int bit = (float_value >> i) & 1;
         printf("%d", bit);
     }
-    printf("\n");
+    printf("\n\n");
 }
 void print_float_bits(float float_value) {
      union {
@@ -388,15 +379,9 @@ void print_float_bits(float float_value) {
 
   float_union.f = float_value;
   for (int i = 31; i >= 0; i--) {
-        // Use bitwise AND to check each bit
         unsigned int bit = (float_union.bits >> i) & 1;
         printf("%d", bit);
     }
-    printf("\n");
+    printf("\n\n");
 }
 
-void readTime(Time* time) {
-  time->hours = readRtcRegister(2);   
-  time->minutes = readRtcRegister(1); 
-  time->seconds = readRtcRegister(0); 
-}

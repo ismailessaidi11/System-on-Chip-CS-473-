@@ -2,6 +2,13 @@
 #define FRACTAL_FLPT_H
 
 #include <stdint.h>
+#include <stdio.h>
+typedef struct
+{
+  int8_t hours;
+  int8_t minutes;
+  int8_t seconds;
+} Time;
 
 //! Colour type (5-bit red, 6-bit green, 5-bit blue)
 typedef uint16_t rgb565;
@@ -22,4 +29,7 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
                   float cx_0, float cy_0, float delta, uint16_t n_max);
 
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time);
 #endif // FRACTAL_FLPT_H

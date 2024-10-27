@@ -1,4 +1,5 @@
 #include "fractal_flpt.h"
+#include <rtc.h>
 #include <swap.h>
 
 //! \brief  Mandelbrot fractal point calculation function
@@ -101,6 +102,8 @@ rgb565 iter_to_colour1(uint16_t iter, uint16_t n_max) {
 void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
                   float cx_0, float cy_0, float delta, uint16_t n_max) {
+  Time start, end;
+  readTime(&start);
   rgb565 *pixel = fbuf;
   float cy = cy_0;
   for (int k = 0; k < height; ++k) {
@@ -113,4 +116,14 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
     }
     cy += delta;
   }
+  readTime(&end);
+  printf("run time : %02X:%02X:%02X\n", end.hours - start.hours, end.minutes - start.minutes, end.seconds - start.seconds);
+}
+
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time) {
+  time->hours = readRtcRegister(2);   
+  time->minutes = readRtcRegister(1); 
+  time->seconds = readRtcRegister(0); 
 }

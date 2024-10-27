@@ -3,6 +3,15 @@
 
 #include <stdint.h>
 
+
+typedef struct
+{
+  int8_t hours;
+  int8_t minutes;
+  int8_t seconds;
+} Time;
+
+
 //! Colour type (5-bit red, 6-bit green, 5-bit blue)
 typedef uint16_t rgb565;
 
@@ -42,4 +51,7 @@ fixed fixed_point_multiply(fixed a, fixed b);
 //! \param  fixed_value  to be printed
 void print_fixed_point_bits(fixed fixed_point_value);
 
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time);
 #endif // FRACTAL_FXPT_H

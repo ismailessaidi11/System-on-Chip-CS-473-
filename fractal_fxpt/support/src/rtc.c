@@ -29,5 +29,5 @@ void printTimeComplete() {
       printf("%02X-%02X-20%02X %02X:%02X:%02X\n", readRtcRegister(4), readRtcRegister(5), readRtcRegister(6), readRtcRegister(2), readRtcRegister(1), new);
       old = new;
     }
-  } while (0); // IT WAS while(1)
+  } while (1);
 }
