@@ -29,9 +29,17 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
 //! \note  For x equal 0, the function returns -1.
 int ilog2(unsigned x);
 
+//! \brief  Convert a float value to a fixed-point
+//! \param  float_value  to be converted to fixed-point
 fixed float_to_fixed(float value);
+
+//! \brief  Multiply two fixed-point numbers
+//! \param  a fixed-point operand of multiplication
+//! \param  b fixed-point operand of multiplication
 fixed fixed_point_multiply(fixed a, fixed b);
+
+//! \brief  Print the bits of fixed-point for debugging
+//! \param  fixed_value  to be printed
 void print_fixed_point_bits(fixed fixed_point_value);
-//float fixed_to_float(fixed fixed_value);
 
 #endif // FRACTAL_FXPT_H

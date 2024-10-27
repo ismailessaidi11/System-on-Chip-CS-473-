@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "swap.h": "c",
-        "charconv": "c"
-    }
+        "charconv": "c",
+        "stdio.h": "c",
+        "stdint.h": "c",
+        "rtc.h": "c"
+    },
+    "workbench.colorTheme": "Default Light+"
 }

@@ -62,9 +62,7 @@ int main() {
    
    /* Clear screen */
    for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
-   printTimeComplete();
    draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0_fixed,CY_0_fixed,delta_fixed,N_MAX);
-   printTimeComplete();
 
 #ifdef OR1300   
    dcache_flush();

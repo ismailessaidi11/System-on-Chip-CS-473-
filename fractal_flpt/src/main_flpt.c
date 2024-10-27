@@ -12,7 +12,7 @@ const int SCREEN_HEIGHT = 512;  //!< screen height
 // Constants describing the initial view port on the fractal function
 const float FRAC_WIDTH = 3.0; //!< default fractal width (3.0 in Q4.28)
 const float CX_0 = -2.0;      //!< default start x-coordinate (-2.0 in Q4.28)
-const float CY_0 = -1.5;      //!< default start y-coordinate (-1.5 in Q4.28)
+const float CY_0 = -1;//-1.5;      //!< default start y-coordinate (-1.5 in Q4.28)
 const uint16_t N_MAX = 64;    //!< maximum number of iterations
 
 int main() {
@@ -38,7 +38,14 @@ int main() {
    /* Clear screen */
    for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
 
-   draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0,CY_0,delta,N_MAX);
+   //draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0,CY_0,delta,N_MAX);
+   float cx = CX_0;
+   for(int i = 0; i < (SCREEN_WIDTH/16); ++i) {
+      uint16_t n_iter = calc_mandelbrot_point_soft(cx, CY_0, N_MAX);
+      cx += delta;
+      printf("number of iterations %d\n", n_iter);
+   }
+   
 #ifdef OR1300   
    dcache_flush();
 #endif

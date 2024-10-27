@@ -3,20 +3,24 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// IEEE Floating point representation defines
+// IEEE Floating point representation 
 /*   ___________________________________________________
     |1 sign bit|  8 exponent bits  |  23 mantissa bits  |
     |__________|___________________|____________________|
 */
-#define IEEE_EXPONENT_NUM_BIT 8                                  // Number of bits for exponent
+#define IEEE_EXPONENT_NUM_BIT  8                                 // Number of bits for exponent
 #define IEEE_EXPONENT_MASK    ((1 << IEEE_EXPONENT_NUM_BIT) - 1) // Mask for exponent = 11111111b 
-#define IEEE_BIAS             127                                // exponent_value = exponent_bits - BIAS
-#define IEEE_MANTISSA_NUM_BIT 23                                 // Number of bits for the mantissa
+#define IEEE_BIAS              127                               // exponent_value = IEEE_exponent_bits - IEEE_BIAS
+#define IEEE_MANTISSA_NUM_BIT  23                                // Number of bits for the mantissa
 #define IEEE_MANTISSA_MASK    ((1 << IEEE_MANTISSA_NUM_BIT) - 1) // Mask for mantissa 
 #define IEEE_IMPLICIT_ONE     (1 << IEEE_MANTISSA_NUM_BIT)       // 1.mantissa
 
-// Fixed point representation defines
-#define NUM_INT     6                        // Number of bits for the integer part
+// Fixed point representation 
+/*   ________________________________________________________________
+    |1 sign bit|  NUM_INT integer bits  |  NUM_FRAC fractional bits  |
+    |__________|________________________|____________________________|
+*/
+#define NUM_INT      6                       // Number of bits for the integer part
 #define NUM_FRAC    (32 - NUM_INT - 1)       // Remaining bits for the fractional part (32-bit total, 1 bit for sign)
 #define INT_MASK    ((1 << NUM_INT) - 1)     // Mask for the integer part
 #define FRAC_MASK   ((1 << NUM_FRAC) - 1)    // Mask for the fractional part
@@ -142,22 +146,6 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
   }
 }
 
-
-//! \brief  Convert a fixed-point value back to a float
-//! \param  fixed_value  to be converted to float
-float fixed_to_float(fixed fixed_value) {
-    return (float)fixed_value / FIXED_SCALE;
-}
-
-//! \brief  Multiply two fixed-point numbers
-//! \param  a fixed operand of multiplication
-//! \param  b fixed operand of multiplication
-fixed fixed_point_multiply(fixed a, fixed b) {
-    int64_t temp = (int64_t)a * (int64_t)b;
-    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back to 32 bits
-    return result;
-}
-
 //! \brief  Convert a float value to a fixed-point
 //! \param  float_value  to be converted to fixed-point
 fixed float_to_fixed(float float_value) {
@@ -205,7 +193,16 @@ fixed float_to_fixed(float float_value) {
     return fixed_value;
 }
 
-//! \brief  Print the bits of fixed point for debugging
+//! \brief  Multiply two fixed-point numbers
+//! \param  a fixed-point operand of multiplication
+//! \param  b fixed-point operand of multiplication
+fixed fixed_point_multiply(fixed a, fixed b) {
+    int64_t temp = (int64_t)a * (int64_t)b;
+    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back to 32 bits
+    return result;
+}
+
+//! \brief  Print the bits of fixed-point for debugging
 //! \param  fixed_value  to be printed
 void print_fixed_point_bits(fixed fixed_value) {  
   int32_t int_part = (fixed_value & (INT_MASK<<NUM_FRAC)) >> NUM_FRAC;
