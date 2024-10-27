@@ -1,5 +1,6 @@
 #include "fractal_myflpt.h"
 #include <swap.h>
+#include <rtc.h>
 #include <stdio.h>
 
 
@@ -133,6 +134,9 @@ rgb565 iter_to_colour1(uint16_t iter, uint16_t n_max) {
 void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
                   myfloat cx_0, myfloat cy_0, myfloat delta, uint16_t n_max) {
+  
+  Time start, end;
+  readTime(&start);
   rgb565 *pixel = fbuf;
   myfloat cy = cy_0;
   for (int k = 0; k < height; ++k) {
@@ -145,6 +149,8 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
     }
     cy = myfloat_addition(cy, delta);
   }
+  readTime(&end);
+  printf("run time : %02X:%02X:%02X\n", end.hours - start.hours, end.minutes - start.minutes, end.seconds - start.seconds);
 }
 
 //! \brief  Convert a IEEE float value to myfloat custom represention 
@@ -220,7 +226,7 @@ myfloat myfloat_addition(myfloat a, myfloat b) {
   // Normalize the result
   uint8_t max_exponent = exponent_a > exponent_b ? exponent_a : exponent_b;
   uint8_t result_exponent = max_exponent;
-  
+
   // Check for mantissa overflow (result exceeds range that implicit 1 can handle)
   if (result_mantissa & (1 << (MYFLOAT_MANTISSA_NUM_BIT + 1))) {
     // Right shift to normalize and increase exponent
@@ -387,4 +393,10 @@ void print_float_bits(float float_value) {
         printf("%d", bit);
     }
     printf("\n");
+}
+
+void readTime(Time* time) {
+  time->hours = readRtcRegister(2);   
+  time->minutes = readRtcRegister(1); 
+  time->seconds = readRtcRegister(0); 
 }

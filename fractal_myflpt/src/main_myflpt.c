@@ -4,14 +4,7 @@
 #include "cache.h"
 #include <stddef.h>
 #include <stdio.h>
-#include "../support/include/rtc.h"
 
-typedef struct
-{
-  int8_t hours;
-  int8_t minutes;
-  int8_t seconds;
-} Time;
 
 // Constants describing the output device
 const int SCREEN_WIDTH = 512;   //!< screen width
@@ -20,12 +13,10 @@ const int SCREEN_HEIGHT = 512;  //!< screen height
 // Constants describing the initial view port on the fractal function
 const float FRAC_WIDTH = 3.0; //!< default fractal width (3.0 in Q4.28)
 const float CX_0 = -2.0;      //!< default start x-coordinate (-2.0 in Q4.28)
-const float CY_0 = -1.5; // -1.5;      //!< default start y-coordinate (-1.5 in Q4.28)
+const float CY_0 = -1.5;      //!< default start y-coordinate (-1.5 in Q4.28)
 const uint16_t N_MAX = 64;    //!< maximum number of iterations
-void readTime(Time* time);
 
 int main() {
-   Time start, end;
    myfloat CX_0_myfloat = float_to_myfloat(CX_0);
    myfloat CY_0_myfloat = float_to_myfloat(CY_0);
 
@@ -52,11 +43,7 @@ int main() {
    /* Clear screen */
    for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
 
-   readTime(&start);
-   //draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0_myfloat,CY_0_myfloat,delta_myfloat,N_MAX);
-   for (i = 0 ; i < SCREEN_WIDTH*SCREEN_HEIGHT ; i++) frameBuffer[i]=0;
-   readTime(&end);
-   printf("run time : %02X:%02X:%02X\n", end.hours - start.hours, end.minutes - start.minutes, end.seconds - start.seconds);
+   draw_fractal(frameBuffer,SCREEN_WIDTH,SCREEN_HEIGHT,&calc_mandelbrot_point_soft, &iter_to_colour,CX_0_myfloat,CY_0_myfloat,delta_myfloat,N_MAX);
 
 #ifdef TEST_MODE   
    // Testing Addition
@@ -126,10 +113,4 @@ int main() {
    dcache_flush();
 #endif
    printf("Done\n");
-}
-
-void readTime(Time* time) {
-  time->hours = readRtcRegister(2);   
-  time->minutes = readRtcRegister(1); 
-  time->seconds = readRtcRegister(0); 
 }

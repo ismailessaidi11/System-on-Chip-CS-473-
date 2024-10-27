@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+
+typedef struct
+{
+  int8_t hours;
+  int8_t minutes;
+  int8_t seconds;
+} Time;
+
 //! Colour type (5-bit red, 6-bit green, 5-bit blue)
 typedef uint16_t rgb565;
 
@@ -48,10 +56,13 @@ myfloat myfloat_negate(myfloat a);
 //! \param  b myfloat operand of comparison
 uint32_t myfloat_less_than(myfloat a, myfloat b);
 
+//! \brief  Sets a Time struct with the time read from RTC
+//! \param  time Pointer to Time struct
+void readTime(Time* time);
+
 void print_myfloat_bits(myfloat myfloat_value);
 void print_bits(int32_t float_value);
 void print_float_bits(float float_value);
-
 
 
 #endif // FRACTAL_MYFLPT_H
