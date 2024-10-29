@@ -14,7 +14,7 @@ typedef struct
 //! Colour type (5-bit red, 6-bit green, 5-bit blue)
 typedef uint16_t rgb565;
 
-//! \brief Custum floating point representation
+//! \brief Custom floating point representation
 typedef int32_t myfloat;
 
 //! \brief Pointer to fractal point calculation function
@@ -33,7 +33,7 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
                   calc_frac_point_p cfp_p, iter_to_colour_p i2c_p,
                   myfloat cx_0, myfloat cy_0, myfloat delta, uint16_t n_max);
 
-//! \brief  Convert a IEEE float value to myfloat custom represention 
+//! \brief  Convert a IEEE float value to myfloat custom representation 
 //! \param  float_value  to be converted to myfloat
 myfloat float_to_myfloat(float float_value);
 

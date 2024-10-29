@@ -42,7 +42,7 @@ int main() {
 
    int i;
    vga_clear();
-   printf("Starting drawing a fractal\n");
+   printf("Starting drawing a fractal in fixed point representation\n");
 
 #ifdef OR1300   
    /* enable the caches */

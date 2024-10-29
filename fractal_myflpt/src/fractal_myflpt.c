@@ -183,20 +183,16 @@ myfloat float_to_myfloat(float float_value) {
 //! \param  a myfloat operand of addition
 //! \param  b myfloat operand of addition
 myfloat myfloat_addition(myfloat a, myfloat b) {
-
   uint8_t exponent_a = a & MYFLOAT_EXPONENT_MASK;
   uint8_t exponent_b = b & MYFLOAT_EXPONENT_MASK;
   uint32_t mantissa_a = (a & MYFLOAT_MANTISSA_MASK) >> MYFLOAT_EXPONENT_NUM_BIT; // Handle them in 0 :: 22 form  instead of 8 :: 30
   uint32_t mantissa_b = (b & MYFLOAT_MANTISSA_MASK) >> MYFLOAT_EXPONENT_NUM_BIT; // Handle them in 0 :: 22 form  instead of 8 :: 30
-
-  // Add the implicit 1 to the mantissa for normalized numbers
-  
-  mantissa_a |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
-  mantissa_b |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
-
   uint32_t sign_a = a & SIGN_MASK;
   uint32_t sign_b = b & SIGN_MASK;
 
+  // Add the implicit 1 to the mantissa for normalized numbers
+  mantissa_a |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
+  mantissa_b |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
 
   // Alignement of the exponents and mantissas
   if (exponent_a > exponent_b) {
@@ -225,9 +221,7 @@ myfloat myfloat_addition(myfloat a, myfloat b) {
 
   // Normalize the result
   uint8_t result_exponent = exponent_a > exponent_b ? exponent_a : exponent_b; // maximum exponent
-
-  // Check for mantissa overflow 
-  if (result_mantissa & (1 << (MYFLOAT_MANTISSA_NUM_BIT + 1))) {
+  if (result_mantissa & (1 << (MYFLOAT_MANTISSA_NUM_BIT + 1))) {// Check for mantissa overflow 
     result_mantissa >>= 1;
     result_exponent++;
   }
@@ -247,42 +241,38 @@ myfloat myfloat_multiply(myfloat a, myfloat b) {
   uint32_t sign_a = a & SIGN_MASK;
   uint32_t sign_b = b & SIGN_MASK;
   uint32_t sign_result = (sign_a ^ sign_b);  // XOR the signs to get the result's sign
-
   uint8_t exponent_a = a & MYFLOAT_EXPONENT_MASK;
   uint8_t exponent_b = b & MYFLOAT_EXPONENT_MASK;
-
   uint32_t mantissa_a = (a & MYFLOAT_MANTISSA_MASK) >> MYFLOAT_EXPONENT_NUM_BIT; // Handle them in 0 :: 22 form  instead of 8 :: 30
   uint32_t mantissa_b = (b & MYFLOAT_MANTISSA_MASK) >> MYFLOAT_EXPONENT_NUM_BIT; // Handle them in 0 :: 22 form  instead of 8 :: 30
 
   // Add the implicit 1 to the mantissa for normalized numbers
-  mantissa_a |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
-  mantissa_b |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  // Adding implicit 1
+  mantissa_a |= (1 << MYFLOAT_MANTISSA_NUM_BIT);  
+  mantissa_b |= (1 << MYFLOAT_MANTISSA_NUM_BIT); 
 
   // Multiply the mantissas
   uint64_t mantissa_product = (uint64_t)mantissa_a * (uint64_t)mantissa_b;
 
   // Normalize the mantissa result if needed
-  if (mantissa_product  >= (1ULL << 2*MYFLOAT_MANTISSA_NUM_BIT + 1)) {  // The mantissa product is greater than 2.0 in 64 bit format (becaue 2*23 = 46 bits )
-    //printf("mantissa product is greater than 2\n");
-    mantissa_product >>= 24;  
+  if (mantissa_product  >= (1ULL << 2*MYFLOAT_MANTISSA_NUM_BIT + 1)) {  // The mantissa product is greater than 2.0 in 64 bit format (becaue 2*23 = 46 bits)
+    mantissa_product >>= (MYFLOAT_MANTISSA_NUM_BIT + 1);  
     exponent_a += 1;  // Adjust exponent for normalization
   } else {
-    mantissa_product >>= 23;  // Normalize the product
+    mantissa_product >>= MYFLOAT_MANTISSA_NUM_BIT;  // Normalize the product
   }
-  mantissa_product <<= MYFLOAT_EXPONENT_NUM_BIT; // restore it in its place (bit8::bit30)
+   // restore mantissa in its place (bit8::bit30)
+  mantissa_product <<= MYFLOAT_EXPONENT_NUM_BIT;
   mantissa_product &= MYFLOAT_MANTISSA_MASK;
 
-  // Add the exponents (subtract the bias)
+  // Add the exponents 
   int32_t exponent_result = (int32_t)(exponent_a + exponent_b - MYFLOAT_BIAS); // because by simply adding we have 2*MYFLOAT_BIAS and want 1*MYFLOAT_BIAS
 
   // Handle overflow/underflow
   if (exponent_result >= MYFLOAT_EXPONENT_MASK) {
-    //printf("overflow\n");
-    // Overflow: Set to infinity or max float value
+    // Overflow: Set to max or min float value depending on sign
     return sign_result | MYFLOAT_EXPONENT_MASK;
   } else if (exponent_result <= 0) {
     // Underflow: Return zero
-    //printf("underflow\n");
     return sign_result;
   }
 
@@ -299,10 +289,8 @@ uint32_t myfloat_less_than(myfloat a, myfloat b) {
   // Extract the sign, exponent, and mantissa
   uint32_t sign_a = a & SIGN_MASK;
   uint32_t sign_b = b & SIGN_MASK;
-  
   uint8_t exponent_a = a & MYFLOAT_EXPONENT_MASK;
   uint8_t exponent_b = b & MYFLOAT_EXPONENT_MASK;
-
   uint32_t mantissa_a = (a & MYFLOAT_MANTISSA_MASK);
   uint32_t mantissa_b = (b & MYFLOAT_MANTISSA_MASK);
 
@@ -311,16 +299,16 @@ uint32_t myfloat_less_than(myfloat a, myfloat b) {
     return (sign_a > sign_b) ? 1 : 0;  // If a is negative and b is positive, return 1 (a < b)
   }
 
-  // If the signs are the same, compare based on exponent and mantissa
+  // Same signs: compare based on exponent and mantissa
   if (exponent_a != exponent_b) {
     if (sign_a == 0) {  // Both are positive
-      return (exponent_a < exponent_b) ? 1 : 0;  // Larger exponent means larger number for positives
+      return (exponent_a < exponent_b) ? 1 : 0;  
     } else {  // Both are negative
-      return (exponent_a > exponent_b) ? 1 : 0;  // Larger exponent means smaller number for negatives
+      return (exponent_a > exponent_b) ? 1 : 0; 
     }
   }
 
-  // Exponents are the same, compare mantissa
+  // Same exponents: compare mantissa
   if (mantissa_a != mantissa_b) {
     if (sign_a == 0) {  // Both are positive
       return (mantissa_a < mantissa_b) ? 1 : 0;
@@ -328,9 +316,7 @@ uint32_t myfloat_less_than(myfloat a, myfloat b) {
       return (mantissa_a > mantissa_b) ? 1 : 0;
     }
   }
-
-  // If all are equal, a is not less than b
-  return 0;
+  return 0;  // If all are equal so false 
 }
 
 //! \brief  Sets a Time struct with the time read from RTC

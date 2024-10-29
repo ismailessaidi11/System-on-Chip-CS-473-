@@ -27,6 +27,7 @@
 #define FRAC_MASK   ((1 << NUM_FRAC) - 1)    // Mask for the fractional part
 #define FIXED_SCALE (1 << NUM_FRAC)          // Scaling factor for fixed-point representation
 #define SIGN_MASK   (1 << 31)                // Sign bit mask for 32-bit
+#define MAX_FIXED_VALUE 0x7FFFFFFF           // Maximum positive fixed point value
 
 
 
@@ -154,57 +155,61 @@ void draw_fractal(rgb565 *fbuf, int width, int height,
 //! \brief  Convert a float value to a fixed-point
 //! \param  float_value  to be converted to fixed-point
 fixed float_to_fixed(float float_value) {
-    // Union to easily access the bits of the float value
-    union {
-        float f;
-        uint32_t bits;
-    } float_union;
+  // Union to access the bits of the float
+  union {
+    float f;
+    uint32_t bits;
+  } float_union;
 
-    float_union.f = float_value;
-    fixed fixed_value;
-    
-    // Extracting the parts of the float
-    uint32_t sign = float_union.bits & SIGN_MASK; // Sign bit
-    uint8_t exponent_bits = ((float_union.bits >> IEEE_MANTISSA_NUM_BIT) & IEEE_EXPONENT_MASK); // Exponent bits
-    uint32_t mantissa = IEEE_IMPLICIT_ONE | (float_union.bits & IEEE_MANTISSA_MASK); // Add implicit 1
-    
-    int8_t exponent = exponent_bits - IEEE_BIAS; // Bias of 127 for the exponent
-    
-    if (exponent_bits == 0) {
-        // Denormalized number, treat as 0 for simplicity in this range
-        fixed_value = 0;
-    } else if (exponent_bits == IEEE_EXPONENT_MASK) { // exponent_bits == 255
-        // Inf/NaN are not representable in fixed-point
-        fixed_value = 0; 
+  float_union.f = float_value;
+  fixed fixed_value;
+  
+  // Extracting the parts of the float
+  uint32_t sign = float_union.bits & SIGN_MASK; // Sign bit
+  uint8_t IEEE_exponent = ((float_union.bits >> IEEE_MANTISSA_NUM_BIT) & IEEE_EXPONENT_MASK); // IEEE float exponent
+  uint32_t mantissa = IEEE_IMPLICIT_ONE | (float_union.bits & IEEE_MANTISSA_MASK); // Add implicit 1
+  
+  int8_t exponent = IEEE_exponent - IEEE_BIAS; // Bias of 127 for the exponent
+  
+  if (IEEE_exponent == 0) { // Denormalized number
+
+    // cannot be represented as the largest denormalized value is 2^−126 
+    fixed_value = 0;
+
+  } else if (IEEE_exponent == IEEE_EXPONENT_MASK) { // Over-Flow Handling
+
+    // wouldn't happen in our mandelbrot calculations (never reaches such values)
+    fixed_value = sign ? (-MAX_FIXED_VALUE) : MAX_FIXED_VALUE; 
+
+  } else { // Normalized number
+
+    if (exponent >= 0) {
+      // Left shift mantissa if exponent is positive
+      mantissa <<= exponent;
     } else {
-        // Normalized number
-        if (exponent >= 0) {
-            // Left shift mantissa if exponent is positive
-            mantissa <<= exponent;
-        } else {
-            // Right shift mantissa if exponent is negative
-            mantissa >>= -exponent;
-        }
-        
-        // Adjust mantissa to fit into the fixed-point format
-        fixed_value = (mantissa << (NUM_FRAC - IEEE_MANTISSA_NUM_BIT)); // Scale the mantissa to NUM_FRAC
-        
-        // Apply the sign to the fixed-point result
-        if (sign) {
-            fixed_value = -fixed_value;
-        }
+      // Right shift mantissa if exponent is negative
+      mantissa >>= -exponent;
     }
     
-    return fixed_value;
+    // Adjust mantissa to fit into the fixed-point format
+    fixed_value = (mantissa << (NUM_FRAC - IEEE_MANTISSA_NUM_BIT)); 
+    
+    // Apply the sign to the fixed-point result
+    if (sign) {
+      fixed_value = -fixed_value;
+    }
+  }
+  
+  return fixed_value;
 }
 
 //! \brief  Multiply two fixed-point numbers
 //! \param  a fixed-point operand of multiplication
 //! \param  b fixed-point operand of multiplication
 fixed fixed_point_multiply(fixed a, fixed b) {
-    int64_t temp = (int64_t)a * (int64_t)b;
-    fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back to 32 bits
-    return result;
+  int64_t temp = (int64_t)a * (int64_t)b;     // cast to 64 bits as multiplication doubles the number bits needed for fixed points
+  fixed result = (fixed)(temp >> NUM_FRAC);  // Shift right to scale back to 32 bits (loses precision during this operation)
+  return result;
 }
 
 //! \brief  Print the bits of fixed-point for debugging
@@ -219,13 +224,13 @@ void print_fixed_point_bits(fixed fixed_value) {
 
   // integer part 
   for (int i = NUM_INT - 1; i >= 0; i--) { 
-      printf("%d", (int_part >> i) & 1);
+    printf("%d", (int_part >> i) & 1);
   }
   printf(" | ");
   
   // fractional part 
   for (int i = NUM_FRAC - 1; i >= 0; i--) {
-      printf("%d", (frac_part >> i) & 1);
+    printf("%d", (frac_part >> i) & 1);
   }
   printf("\n");
 }
@@ -233,7 +238,7 @@ void print_fixed_point_bits(fixed fixed_value) {
 //! \brief  Sets a Time struct with the time read from RTC
 //! \param  time Pointer to Time struct
 void readTime(Time* time) {
-  time->hours = readRtcRegister(2);   
-  time->minutes = readRtcRegister(1); 
-  time->seconds = readRtcRegister(0); 
+  time->hours = readRtcRegister(2);   // Read hours
+  time->minutes = readRtcRegister(1); // Read minutes
+  time->seconds = readRtcRegister(0); // Read seconds
 }

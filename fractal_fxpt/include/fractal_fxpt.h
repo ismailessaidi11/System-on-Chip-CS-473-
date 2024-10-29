@@ -15,7 +15,7 @@ typedef struct
 //! Colour type (5-bit red, 6-bit green, 5-bit blue)
 typedef uint16_t rgb565;
 
-//! \brief Fixed point type in Q4.28 format
+//! \brief Fixed point type
 typedef int32_t fixed;
 
 //! \brief Pointer to fractal point calculation function

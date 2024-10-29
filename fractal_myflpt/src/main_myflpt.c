@@ -27,7 +27,7 @@ int main() {
    myfloat delta_myfloat = float_to_myfloat(delta);
    int i;
    vga_clear();
-   printf("Starting drawing a fractal\n");
+   printf("Starting drawing a fractal in myfloat representation\n");
 #ifdef OR1300   
    /* enable the caches */
    icache_write_cfg( CACHE_DIRECT_MAPPED | CACHE_SIZE_8K | CACHE_REPLACE_FIFO );
